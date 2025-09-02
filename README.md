@@ -1,62 +1,75 @@
 # **Multi-Label ICD Code Classification using MLP**
 
+[**Competition Link**](https://www.kaggle.com/competitions/da5401-2024-ml-challenge)
+
+---
+
 ## **Overview**
 
-This project addresses a **multi-label classification problem** where the task is to predict **ICD codes** based on provided **medical embeddings**. The solution uses **deep learning (MLP)** to map input embeddings to multiple ICD codes per instance.
+This project is part of the [**DA5401 2024 ML Challenge**](https://www.kaggle.com/competitions/da5401-2024-ml-challenge).
+The task is to **predict multiple ICD codes for a patient based on pre-computed embeddings**. Each sample can have **multiple labels**, making it a **multi-label classification problem**.
+
+Our solution uses a **Multi-Layer Perceptron (MLP)** model trained on PCA-reduced embeddings with a custom metric focusing on **macro F2 score** for better recall.
 
 ---
 
 ## **Dataset**
 
-* **Input**: Pre-computed embeddings (`embeddings_1.npy`, `embeddings_2.npy`)
-* **Labels**: ICD codes provided in text files (`icd_codes_1.txt`, `icd_codes_2.txt`)
-* **Test Data**: `test_data.npy`
-* **Label Encoding**: Multi-hot encoding (One-hot for multiple labels per sample)
+* **Input Files**:
 
-The combined dataset consists of:
+  * `embeddings_1.npy`, `embeddings_2.npy` → Pre-computed feature embeddings.
+  * `icd_codes_1.txt`, `icd_codes_2.txt` → ICD code labels for each embedding set.
+  * `test_data.npy` → Test set for prediction.
+* **Labels**: Multiple ICD codes per sample, separated by `;`.
 
-* **Features (X)**: Concatenated embeddings from both sources
-* **Labels (y)**: Multi-hot encoded ICD codes
+**Label Processing**:
+
+* Extract all unique ICD codes.
+* Encode labels using **multi-hot encoding**.
 
 ---
 
-## **Preprocessing**
+## **Preprocessing Pipeline**
 
-1. **Label Encoding**: Extract unique ICD codes and encode using multi-hot representation.
-2. **Feature Scaling**: Standardized using `StandardScaler`.
-3. **Dimensionality Reduction**:
+1. **Concatenate embeddings** → `X = embeddings_1 + embeddings_2`
+2. **Multi-hot encode labels** → Shape: `(n_samples, n_classes)`
+3. **Standardize features** using `StandardScaler`.
+4. **Dimensionality Reduction**:
 
-   * **PCA** applied to retain **95% variance**.
-4. **Train-Validation Split**: Performed with an extremely small validation size (`0.0001`) due to data constraints.
+   * Apply **PCA** to retain **95% variance**.
+5. **Train-Validation Split** → `test_size=0.0001` (small due to data constraints).
 
 ---
 
 ## **Model Architecture**
 
-The model is a **Multi-Layer Perceptron (MLP)** with the following structure:
+The model is a **deep neural network (MLP)** built with TensorFlow/Keras:
 
-* **Input Layer**: Size = number of PCA components
-* **Hidden Layers**:
+| Layer            | Details                                               |
+| ---------------- | ----------------------------------------------------- |
+| Input            | PCA components                                        |
+| Dense (Hidden 1) | 1024 units, activation = **SELU**                     |
+| Dropout          | 0.4                                                   |
+| Dense (Hidden 2) | 1024 units, activation = **SELU**                     |
+| Dropout          | 0.4                                                   |
+| Output           | Units = number of ICD codes, activation = **sigmoid** |
 
-  * Dense(1024, activation='selu') + Dropout(0.4)
-  * Dense(1024, activation='selu') + Dropout(0.4)
-* **Output Layer**: Dense(units = number of ICD codes, activation='sigmoid')
-* **Loss Function**: Binary Crossentropy (for multi-label classification)
-* **Optimizer**: Adam
-* **Metrics**:
+**Loss Function**: `binary_crossentropy`
+**Optimizer**: `Adam`
+**Metrics**:
 
-  * Accuracy
-  * Custom **avg\_f2\_macro** (macro F2 score)
+* Accuracy
+* Custom `avg_f2_macro` (Macro F2 Score)
 
 ---
 
 ## **Custom Components**
 
-* **Custom F2 Metric**: A Keras-compatible metric for macro-averaged F2 score.
+* **Custom Macro F2 Metric**: Calculates the macro-averaged F2 score (β=2) inside Keras.
 * **Custom Learning Rate Scheduler**:
 
-  * Reduces LR by a factor (`0.4`) after patience (`3` epochs) without improvement.
-  * Minimum LR set to `1e-6`.
+  * Reduces learning rate by a factor of `0.4` after `3` epochs without improvement.
+  * Minimum LR: `1e-6`.
 
 ---
 
@@ -64,11 +77,11 @@ The model is a **Multi-Layer Perceptron (MLP)** with the following structure:
 
 * **Epochs**: 100
 * **Batch Size**: 1024
-* **Validation Data**: Extremely small split due to constraints.
+* **Validation Set**: Extremely small due to constraints.
 * **Callbacks**:
 
-  * `ModelCheckpoint` to save the best model based on `avg_f2_macro`.
-  * Custom LR Scheduler for adaptive learning rate.
+  * `ModelCheckpoint` → Save best model based on **F2 score**.
+  * Custom **Learning Rate Scheduler**.
 
 ---
 
@@ -76,20 +89,19 @@ The model is a **Multi-Layer Perceptron (MLP)** with the following structure:
 
 On the validation set:
 
-* **Accuracy**: Reported using `accuracy_score`.
-* **Macro F2 Score**: Reported using `fbeta_score` with β=2.
+* **Accuracy**
+* **Macro F2 Score (β=2)** → prioritizes recall for rare ICD codes.
 
 ---
 
 ## **Inference & Submission**
 
-* Load **best saved model**.
-* Apply **same preprocessing (scaling + PCA)** on test data.
-* Predict ICD codes using **sigmoid outputs** → thresholded at **0.5**.
-* Convert predictions to **multi-label format** (`label1;label2;...`).
-* Save as **submissions23.csv** with the following format:
+* Apply **scaling + PCA** on test data.
+* Predict probabilities → Apply **threshold = 0.5**.
+* Convert to multi-label string format (`label1;label2;...`).
+* Save as `submissions23.csv`:
 
-  ```
+  ```csv
   id,labels
   1,I10;E11
   2,J45
@@ -100,15 +112,7 @@ On the validation set:
 
 ## **Dependencies**
 
-* Python 3.x
-* TensorFlow / Keras
-* NumPy
-* Pandas
-* scikit-learn
-* matplotlib, seaborn
-* wandb (optional for tracking)
-
-Install all dependencies using:
+Install the following:
 
 ```bash
 pip install tensorflow scikit-learn pandas numpy matplotlib seaborn wandb kerastuner
@@ -118,17 +122,18 @@ pip install tensorflow scikit-learn pandas numpy matplotlib seaborn wandb kerast
 
 ## **How to Run**
 
-1. Place all required files in the same directory:
+1. Download competition data from [Kaggle](https://www.kaggle.com/competitions/da5401-2024-ml-challenge).
+2. Place the following files in the working directory:
 
    * `embeddings_1.npy`, `embeddings_2.npy`
    * `icd_codes_1.txt`, `icd_codes_2.txt`
    * `test_data.npy`
-2. Run the notebook or script:
+3. Run:
 
    ```bash
    python train_icd_classifier.py
    ```
-3. The final submission file will be saved as:
+4. Final submission will be saved as:
 
    ```
    submissions23.csv
@@ -138,5 +143,19 @@ pip install tensorflow scikit-learn pandas numpy matplotlib seaborn wandb kerast
 
 ## **Performance Metric**
 
-The model is optimized for **macro F2 score** (β=2) to prioritize **recall** for rare ICD codes.
+The model is optimized for **Macro F2 Score** to ensure **high recall for multiple ICD codes**.
+
+---
+
+## **Future Improvements**
+
+✔ Use **Transformer-based models** for embeddings instead of static vectors.
+✔ Implement **threshold tuning per class** for better performance.
+✔ Explore **ensemble methods** combining MLP with tree-based models.
+✔ Use **Bayesian Optimization** for hyperparameter tuning.
+
+---
+
+✅ **Competition Link**: [https://www.kaggle.com/competitions/da5401-2024-ml-challenge](https://www.kaggle.com/competitions/da5401-2024-ml-challenge)
+
 
