@@ -145,14 +145,7 @@ pip install tensorflow scikit-learn pandas numpy matplotlib seaborn wandb kerast
 
 The model is optimized for **Macro F2 Score** to ensure **high recall for multiple ICD codes**.
 
----
 
-## **Future Improvements**
-
-✔ Use **Transformer-based models** for embeddings instead of static vectors.
-✔ Implement **threshold tuning per class** for better performance.
-✔ Explore **ensemble methods** combining MLP with tree-based models.
-✔ Use **Bayesian Optimization** for hyperparameter tuning.
 
 ---
 
